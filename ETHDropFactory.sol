@@ -5,6 +5,11 @@ contract ETHDrop {
     address payable[] members;
     address payable private secretary;
     
+    modifier onlySecretary() {
+        require(msg.sender == secretary);
+        _;
+    }
+    
     function() external payable { }
     
     constructor(uint256 _drip, address payable[] memory _members) payable public {
@@ -13,13 +18,13 @@ contract ETHDrop {
         secretary = members[0];
     }
     
-    function dripETH() public {
+    function dripETH() public onlySecretary {
         for (uint256 i = 0; i < members.length; i++) {
             members[i].transfer(drip);
         }
     }
     
-    function dropETH(uint256 drop) payable public {
+    function dropETH(uint256 drop) payable public onlySecretary {
         for (uint256 i = 0; i < members.length; i++) {
             members[i].transfer(drop);
         }
@@ -32,11 +37,6 @@ contract ETHDrop {
     /***************
     MEMBER FUNCTIONS
     ***************/
-    modifier onlySecretary() {
-        require(msg.sender == secretary);
-        _;
-    }
-    
     function addMember(address payable newMember) public onlySecretary {
         members.push(newMember);
     }
