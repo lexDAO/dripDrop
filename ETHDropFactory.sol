@@ -1,7 +1,3 @@
-/**
- *Submitted for verification at Etherscan.io on 2020-04-18
-*/
-
 pragma solidity 0.5.14;
 
 contract ETHDrop {
