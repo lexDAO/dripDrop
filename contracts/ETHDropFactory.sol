@@ -40,6 +40,9 @@ contract ETHDrop {
     function addMember(address payable newMember) public onlySecretary {
         members.push(newMember);
     }
+    function removeMember(address payable newMember) public onlySecretary {
+        members.push(newMember);
+    }
     
     function getMembership() public view returns (address payable[] memory) {
         return members;
