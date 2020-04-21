@@ -16,6 +16,8 @@ contract ETHDrop {
         require(msg.sender == secretary);
         _;
     }
+    
+    function() external payable { }
 
     constructor(uint256 _drip, address payable[] memory _members) payable public {
          for (uint256 i = 0; i < _members.length; i++) {
