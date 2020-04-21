@@ -24,9 +24,9 @@ contract ETHDrop {
         }
     }
     
-    function dropETH(uint256 drop) payable public onlySecretary {
+    function dropETH() payable public onlySecretary {
         for (uint256 i = 0; i < members.length; i++) {
-            members[i].transfer(drop);
+            members[i].transfer(msg.value);
         }
     }
     
