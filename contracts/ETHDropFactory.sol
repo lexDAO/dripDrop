@@ -20,15 +20,14 @@ contract ETHDrop {
     function() external payable { }
 
     constructor(uint256 _drip, address payable[] memory _members) payable public {
-         for (uint256 i = 0; i < _members.length; i++) {
+        for (uint256 i = 0; i < _members.length; i++) {
             require(_members[i] != address(0), "member address cannot be 0");
             memberList[_members[i]].exists = true;
             memberList[_members[i]].memberIndex = members.push(_members[i]) - 1;
-         }
+        }
         
         drip = _drip;
-        secretary = members[0];
-        
+        secretary = members[0];    
     }
 
     function dripETH() public onlySecretary {
