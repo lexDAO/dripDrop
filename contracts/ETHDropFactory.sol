@@ -1,6 +1,9 @@
 pragma solidity 0.5.14;
 
 contract ETHDrop {
+    /*******
+    INTERNAL
+    *******/
     uint256 public drip;
     address payable[] members;
     address payable public secretary;
@@ -17,9 +20,9 @@ contract ETHDrop {
         _;
     }
     
-    function() external payable { }
+    function() external payable { } // contract receives ETH
 
-    constructor(uint256 _drip, address payable[] memory _members) payable public {
+    constructor(uint256 _drip, address payable[] memory _members) payable public { // initializes contract
         for (uint256 i = 0; i < _members.length; i++) {
             require(_members[i] != address(0), "member address cannot be 0");
             memberList[_members[i]].memberIndex = members.push(_members[i]) - 1;
@@ -27,9 +30,12 @@ contract ETHDrop {
         }
         
         drip = _drip;
-        secretary = members[0];    
+        secretary = members[0]; // first address in member array is secretary  
     }
-
+    
+    /******************
+    DRIP/DROP FUNCTIONS
+    ******************/
     function dripETH() public onlySecretary { // transfer ETH to members per stored drip amount
         for (uint256 i = 0; i < members.length; i++) {
             members[i].transfer(drip);
@@ -48,14 +54,14 @@ contract ETHDrop {
         }
     }
 
-    function getBalance() public view returns (uint256) {
+    function getETHBalance() public view returns (uint256) { // get amount of ETH in contract
         return address(this).balance;
     }
-
+    
     /***************
     MEMBER FUNCTIONS
     ***************/
-    function addMember(address payable newMember) public onlySecretary {
+    function addMember(address payable newMember) public onlySecretary { 
         require(memberList[newMember].exists != true, "member already exists");
         memberList[newMember].memberIndex = members.push(newMember) - 1;
         memberList[newMember].exists = true;
