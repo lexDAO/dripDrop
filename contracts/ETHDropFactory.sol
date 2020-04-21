@@ -8,12 +8,12 @@ contract ETHDrop {
     mapping(address => Member) public memberList;
     
     struct Member {
+        uint256 memberIndex;
         bool exists;
-        uint memberIndex;
     }
 
     modifier onlySecretary() {
-        require(msg.sender == secretary);
+        require(msg.sender == secretary, "caller must be secretary");
         _;
     }
     
@@ -22,27 +22,27 @@ contract ETHDrop {
     constructor(uint256 _drip, address payable[] memory _members) payable public {
         for (uint256 i = 0; i < _members.length; i++) {
             require(_members[i] != address(0), "member address cannot be 0");
-            memberList[_members[i]].exists = true;
             memberList[_members[i]].memberIndex = members.push(_members[i]) - 1;
+            memberList[_members[i]].exists = true;
         }
         
         drip = _drip;
         secretary = members[0];    
     }
 
-    function dripETH() public onlySecretary {
+    function dripETH() public onlySecretary { // transfer ETH to members per stored drip amount
         for (uint256 i = 0; i < members.length; i++) {
             members[i].transfer(drip);
         }
     }
 
-    function dropETH() payable public onlySecretary {
+    function dropETH() payable public onlySecretary { // transfer ETH to members per attached drop amount
         for (uint256 i = 0; i < members.length; i++) {
             members[i].transfer(msg.value);
         }
     }
     
-    function customDropETH(uint256[] memory drop) payable public onlySecretary {
+    function customDropETH(uint256[] memory drop) payable public onlySecretary { // transfer ETH to members per index amounts
         for (uint256 i = 0; i < members.length; i++) {
             members[i].transfer(drop[i]);
         }
@@ -57,8 +57,8 @@ contract ETHDrop {
     ***************/
     function addMember(address payable newMember) public onlySecretary {
         require(memberList[newMember].exists != true, "member already exists");
-        memberList[newMember].exists = true;
         memberList[newMember].memberIndex = members.push(newMember) - 1;
+        memberList[newMember].exists = true;
     }
 
     function getMembership() public view returns (address payable[] memory) {
@@ -74,13 +74,13 @@ contract ETHDrop {
         return (members[memberList[memberAddress].memberIndex] == memberAddress);
     }
 
-    function removeMember(address _removeMember) public onlySecretary {
-        require(memberList[_removeMember].exists = true, "no such member to remove");
-        uint256 memberToDelete = memberList[_removeMember].memberIndex;
+    function removeMember(address removedMember) public onlySecretary {
+        require(memberList[removedMember].exists = true, "no such member to remove");
+        uint256 memberToDelete = memberList[removedMember].memberIndex;
         address payable keyToMove = members[members.length-1];
         members[memberToDelete] = keyToMove;
-        memberList[_removeMember].exists = false;
         memberList[keyToMove].memberIndex = memberToDelete;
+        memberList[removedMember].exists = false;
         members.length--;
     }
 
