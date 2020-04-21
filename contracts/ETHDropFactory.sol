@@ -1,17 +1,11 @@
 pragma solidity 0.5.14;
 
-
 contract ETHDrop {
-
-    struct Member {
-        bool exists;
-        uint memberIndex;
-    }
-
-    mapping(address => Member) public memberList;
-    address payable[] members;
     uint256 public drip;
-    address payable private secretary;
+    address payable[] members;
+    address payable public secretary;
+    
+    mapping(address => Member) public memberList;
 
     modifier onlySecretary() {
         require(msg.sender == secretary);
@@ -19,15 +13,15 @@ contract ETHDrop {
     }
 
     constructor(uint256 _drip, address payable[] memory _members) payable public {
-        drip = _drip;
-
          for (uint256 i = 0; i < _members.length; i++) {
             require(_members[i] != address(0), "member address cannot be 0");
             memberList[_members[i]].exists = true;
             memberList[_members[i]].memberIndex = members.push(_members[i]) - 1;
-        }
-
+         }
+        
+        drip = _drip;
         secretary = members[0];
+        
     }
 
     function dripETH() public onlySecretary {
@@ -36,9 +30,15 @@ contract ETHDrop {
         }
     }
 
-    function dropETH(uint256 drop) payable public onlySecretary {
+    function dropETH() payable public onlySecretary {
         for (uint256 i = 0; i < members.length; i++) {
-            members[i].transfer(drop);
+            members[i].transfer(msg.value);
+        }
+    }
+    
+    function customDropETH(uint256[] memory drop) payable public onlySecretary {
+        for (uint256 i = 0; i < members.length; i++) {
+            members[i].transfer(drop[i]);
         }
     }
 
@@ -77,7 +77,6 @@ contract ETHDrop {
         memberList[keyToMove].memberIndex = memberToDelete;
         members.length--;
     }
-
 
     function transferSecretary(address payable newSecretary) public onlySecretary {
         secretary = newSecretary;
