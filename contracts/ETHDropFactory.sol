@@ -6,6 +6,11 @@ contract ETHDrop {
     address payable public secretary;
     
     mapping(address => Member) public memberList;
+    
+    struct Member {
+        bool exists;
+        uint memberIndex;
+    }
 
     modifier onlySecretary() {
         require(msg.sender == secretary);
