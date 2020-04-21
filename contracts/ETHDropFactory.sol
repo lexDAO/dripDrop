@@ -17,7 +17,7 @@ contract ETHDrop {
         members = _members;
         secretary = members[0];
     }
-    
+
     function dripETH() public onlySecretary {
         for (uint256 i = 0; i < members.length; i++) {
             members[i].transfer(drip);
@@ -27,6 +27,12 @@ contract ETHDrop {
     function dropETH() payable public onlySecretary {
         for (uint256 i = 0; i < members.length; i++) {
             members[i].transfer(msg.value);
+        }
+    }
+    
+    function customDropETH(uint256[] memory drop) payable public onlySecretary {
+        for (uint256 i = 0; i < members.length; i++) {
+            members[i].transfer(drop[i]);
         }
     }
     
