@@ -278,7 +278,7 @@ contract MemberDripDropFactory {
     MemberDripDrop private DripDrop;
     address[] public dripdrops;
 
-    event newDripDrop(address indexed secretary, address indexed dripdrop);
+    event newDripDrop(address indexed dripdrop, address indexed secretary);
 
     function newMemberDripDrop(
         uint256 _ethDrip, 
@@ -295,6 +295,6 @@ contract MemberDripDropFactory {
             _message);
             
         dripdrops.push(address(DripDrop));
-        emit newDripDrop(_members[0], address(DripDrop));
+        emit newDripDrop(address(DripDrop), _members[0]);
     }
 }
