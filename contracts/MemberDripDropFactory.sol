@@ -47,7 +47,7 @@ contract MemberDripDrop {
         address payable[] memory _members) payable public { // initializes contract
         for (uint256 i = 0; i < _members.length; i++) {
             require(_members[i] != address(0), "member address cannot be 0");
-            memberList[_members[i]].memberIndex = members.push(_members[i]) - 1;
+            memberList[_members[i]].memberIndex = members.push(_members[i]);
             memberList[_members[i]].exists = true;
         }
         
