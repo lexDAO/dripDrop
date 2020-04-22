@@ -1,12 +1,108 @@
 pragma solidity 0.5.14;
 
+/*
+ * @dev Provides information about the current execution context, including the
+ * sender of the transaction and its data. While these are generally available
+ * via msg.sender and msg.data, they should not be accessed in such a direct
+ * manner, since when dealing with GSN meta-transactions the account sending and
+ * paying for execution may not be the actual sender (as far as an application
+ * is concerned).
+ *
+ * This contract is only required for intermediate, library-like contracts.
+ */
+contract Context {
+    // Empty internal constructor, to prevent people from mistakenly deploying
+    // an instance of this contract, which should be used via inheritance.
+    constructor () internal { }
+
+    function _msgSender() internal view returns (address payable) {
+        return msg.sender;
+    }
+
+    function _msgData() internal view returns (bytes memory) {
+        this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
+        return msg.data;
+    }
+}
+
+/**
+ * @title Roles
+ * @dev Library for managing addresses assigned to a Role.
+ */
+library Roles {
+    struct Role {
+        mapping (address => bool) bearer;
+    }
+
+    /**
+     * @dev Give an account access to this role.
+     */
+    function add(Role storage role, address account) internal {
+        require(!has(role, account), "Roles: account already has role");
+        role.bearer[account] = true;
+    }
+
+    /**
+     * @dev Remove an account's access to this role.
+     */
+    function remove(Role storage role, address account) internal {
+        require(has(role, account), "Roles: account does not have role");
+        role.bearer[account] = false;
+    }
+
+    /**
+     * @dev Check if an account has this role.
+     * @return bool
+     */
+    function has(Role storage role, address account) internal view returns (bool) {
+        require(account != address(0), "Roles: account is the zero address");
+        return role.bearer[account];
+    }
+}
+
+contract SecretaryRole is Context {
+    using Roles for Roles.Role;
+
+    event SecretaryAdded(address indexed account);
+    event SecretaryRemoved(address indexed account);
+
+    Roles.Role private _secretaries;
+
+    modifier onlySecretary() {
+        require(isSecretary(_msgSender()), "SecretaryRole: caller does not have the Secretary role");
+        _;
+    }
+    
+    function isSecretary(address account) public view returns (bool) {
+        return _secretaries.has(account);
+    }
+
+    function addSecretary(address account) public onlySecretary {
+        _addSecretary(account);
+    }
+
+    function renounceSecretary() public {
+        _removeSecretary(_msgSender());
+    }
+
+    function _addSecretary(address account) internal {
+        _secretaries.add(account);
+        emit SecretaryAdded(account);
+    }
+
+    function _removeSecretary(address account) internal {
+        _secretaries.remove(account);
+        emit SecretaryRemoved(account);
+    }
+}
+
 interface IToken { // brief ERC-20 interface
     function balanceOf(address account) external view returns (uint256);
     function transfer(address recipient, uint256 amount) external returns (bool);
     function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
 }
 
-contract MemberDripDrop {
+contract MemberDripDrop is SecretaryRole {
     /***************
     INTERNAL DETAILS
     ***************/
@@ -14,7 +110,7 @@ contract MemberDripDrop {
     uint256 public tokenDrip;
     IToken public dripToken;
     address payable[] members;
-    address payable public secretary;
+    string public message;
     
     mapping(address => Member) public memberList;
     
@@ -23,11 +119,6 @@ contract MemberDripDrop {
         bool exists;
     }
 
-    modifier onlySecretary() {
-        require(msg.sender == secretary, "caller must be secretary");
-        _;
-    }
-    
     // ******
     // EVENTS
     // ******
@@ -36,6 +127,7 @@ contract MemberDripDrop {
     event ETHDripUpdated(uint256 indexed updatedETHDrip);
     event MemberAdded(address indexed addedMember);
     event MemberRemoved(address indexed removedMember);
+    event MessageUpdated(string indexed updatedMessage);
     event SecretaryUpdated(address indexed updatedSecretary);
     
     function() external payable { } // contract receives ETH
@@ -44,7 +136,8 @@ contract MemberDripDrop {
         uint256 _ethDrip, 
         uint256 _tokenDrip,  
         address dripTokenAddress, 
-        address payable[] memory _members) payable public { // initializes contract
+        address payable[] memory _members,
+        string memory _message) payable public { // initializes contract
         for (uint256 i = 0; i < _members.length; i++) {
             require(_members[i] != address(0), "member address cannot be 0");
             memberList[_members[i]].memberIndex = members.push(_members[i]) - 1;
@@ -54,7 +147,9 @@ contract MemberDripDrop {
         ethDrip = _ethDrip;
         tokenDrip = _tokenDrip;
         dripToken = IToken(dripTokenAddress);
-        secretary = members[0]; // first address in member array is secretary  
+        message = _message;
+        
+        _addSecretary(members[0]); // first address in member array is initial secretary  
     }
     
     /************************
@@ -124,12 +219,12 @@ contract MemberDripDrop {
         members.length--;
         emit MemberRemoved(removedMember);
     }
-
-    function updateSecretary(address payable updatedSecretary) public onlySecretary {
-        secretary = updatedSecretary;
-        emit SecretaryUpdated(updatedSecretary);
-    }
     
+    function updateMessage(string memory updatedMessage) public onlySecretary {
+        message = updatedMessage;
+        emit MessageUpdated(updatedMessage);
+    }
+
     // ************
     // DRIP DETAILS
     // ************
@@ -189,12 +284,16 @@ contract MemberDripDropFactory {
         uint256 _ethDrip, 
         uint256 _tokenDrip,  
         address dripTokenAddress, 
-        address payable[] memory _members) payable public {
+        address payable[] memory _members,
+        string memory _message) payable public {
+            
         DripDrop = (new MemberDripDrop).value(msg.value)(
             _ethDrip,
             _tokenDrip,
             dripTokenAddress,
-            _members);
+            _members,
+            _message);
+            
         dripdrops.push(address(DripDrop));
         emit newDripDrop(_members[0], address(DripDrop));
     }
