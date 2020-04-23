@@ -72,7 +72,7 @@ contract SecretaryRole is Context {
         require(isSecretary(_msgSender()), "SecretaryRole: caller does not have the Secretary role");
         _;
     }
-    
+
     function isSecretary(address account) public view returns (bool) {
         return _secretaries.has(account);
     }
@@ -111,9 +111,9 @@ contract MemberDripDrop is SecretaryRole {
     IToken public dripToken;
     address payable[] members;
     string public message;
-    
+
     mapping(address => Member) public memberList;
-    
+
     struct Member {
         uint256 memberIndex;
         bool exists;
@@ -129,29 +129,29 @@ contract MemberDripDrop is SecretaryRole {
     event MemberRemoved(address indexed removedMember);
     event MessageUpdated(string indexed updatedMessage);
     event SecretaryUpdated(address indexed updatedSecretary);
-    
+
     function() external payable { } // contract receives ETH
 
     constructor(
-        uint256 _ethDrip, 
-        uint256 _tokenDrip,  
-        address dripTokenAddress, 
+        uint256 _ethDrip,
+        uint256 _tokenDrip,
+        address dripTokenAddress,
         address payable[] memory _members,
         string memory _message) payable public { // initializes contract
         for (uint256 i = 0; i < _members.length; i++) {
             require(_members[i] != address(0), "member address cannot be 0");
-            memberList[_members[i]].memberIndex = members.push(_members[i]) - 1;
+            memberList[_members[i]].memberIndex = members.push(_members[i]);
             memberList[_members[i]].exists = true;
         }
-        
+
         ethDrip = _ethDrip;
         tokenDrip = _tokenDrip;
         dripToken = IToken(dripTokenAddress);
         message = _message;
-        
-        _addSecretary(members[0]); // first address in member array is initial secretary  
+
+        _addSecretary(members[0]); // first address in member array is initial secretary
     }
-    
+
     /************************
     DRIP/DROP TOKEN FUNCTIONS
     ************************/
@@ -160,28 +160,28 @@ contract MemberDripDrop is SecretaryRole {
             dripToken.transfer(members[i], tokenDrip);
         }
     }
-    
+
     function customDripTKN(uint256[] memory drip, address dripTokenAddress) public onlySecretary { // transfer stored token to members per index drip amounts
         for (uint256 i = 0; i < members.length; i++) {
             IToken token = IToken(dripTokenAddress);
             token.transfer(members[i], drip[i]);
         }
     }
-    
+
     function dropTKN(uint256 drop, address dropTokenAddress) public { // transfer msg.sender token to members per approved drop amount
         for (uint256 i = 0; i < members.length; i++) {
             IToken dropToken = IToken(dropTokenAddress);
             dropToken.transferFrom(msg.sender, members[i], drop / members.length);
         }
     }
-    
+
     function customDropTKN(uint256[] memory drop, address dropTokenAddress) public { // transfer msg.sender token to members per approved index drop amounts
         for (uint256 i = 0; i < members.length; i++) {
             IToken dropToken = IToken(dropTokenAddress);
             dropToken.transferFrom(msg.sender, members[i], drop[i]);
         }
     }
-    
+
     /**********************
     DRIP/DROP ETH FUNCTIONS
     **********************/
@@ -190,7 +190,7 @@ contract MemberDripDrop is SecretaryRole {
             members[i].transfer(ethDrip);
         }
     }
-    
+
     function customDripETH(uint256[] memory drip) payable public onlySecretary { // transfer stored ETH to members per index drip amounts
         for (uint256 i = 0; i < members.length; i++) {
             members[i].transfer(drip[i]);
@@ -203,16 +203,16 @@ contract MemberDripDrop is SecretaryRole {
             members[i].transfer(drop / members.length);
         }
     }
-    
+
     /******************
     SECRETARY FUNCTIONS
     ******************/
     // ******************
     // DRIP/DROP REGISTRY
     // ******************
-    function addMember(address payable addedMember) public onlySecretary { 
+    function addMember(address payable addedMember) public onlySecretary {
         require(memberList[addedMember].exists != true, "member already exists");
-        memberList[addedMember].memberIndex = members.push(addedMember) - 1;
+        memberList[addedMember].memberIndex = members.push(addedMember);
         memberList[addedMember].exists = true;
         emit MemberAdded(addedMember);
     }
@@ -221,13 +221,13 @@ contract MemberDripDrop is SecretaryRole {
         require(memberList[removedMember].exists = true, "no such member to remove");
         uint256 memberToDelete = memberList[removedMember].memberIndex;
         address payable keyToMove = members[members.length-1];
-        members[memberToDelete] = keyToMove;
-        memberList[keyToMove].memberIndex = memberToDelete;
+        members[memberToDelete-1] = keyToMove;
+        memberList[keyToMove].memberIndex = memberToDelete-1;
         memberList[removedMember].exists = false;
         members.length--;
         emit MemberRemoved(removedMember);
     }
-    
+
     function updateMessage(string memory updatedMessage) public onlySecretary {
         message = updatedMessage;
         emit MessageUpdated(updatedMessage);
@@ -240,17 +240,17 @@ contract MemberDripDrop is SecretaryRole {
         ethDrip = updatedETHDrip;
         emit ETHDripUpdated(updatedETHDrip);
     }
-    
+
     function updateDripToken(address updatedDripToken) public onlySecretary {
         dripToken = IToken(updatedDripToken);
         emit DripTokenUpdated(updatedDripToken);
     }
-    
+
     function updateTokenDrip(uint256 updatedTokenDrip) public onlySecretary {
         tokenDrip = updatedTokenDrip;
         emit TokenDripUpdated(updatedTokenDrip);
     }
-    
+
     /***************
     GETTER FUNCTIONS
     ***************/
@@ -260,7 +260,7 @@ contract MemberDripDrop is SecretaryRole {
     function ETHBalance() public view returns (uint256) { // get balance of ETH in contract
         return address(this).balance;
     }
-    
+
     function TokenBalance() public view returns (uint256) { // get balance of drip token in contract
         return dripToken.balanceOf(address(this));
     }
@@ -278,7 +278,13 @@ contract MemberDripDrop is SecretaryRole {
 
     function isMember(address memberAddress) public view returns (bool memberExists) {
         if(members.length == 0) return false;
-        return (members[memberList[memberAddress].memberIndex] == memberAddress);
+        uint tempValue = memberList[memberAddress].memberIndex-1;
+        if (tempValue < 0) {
+            return false;
+        } else {
+            return (members[tempValue] == memberAddress);
+        }
+        // return (members[memberList[memberAddress].memberIndex] == memberAddress);
     }
 }
 
@@ -289,19 +295,19 @@ contract MemberDripDropFactory {
     event newDripDrop(address indexed dripdrop, address indexed secretary);
 
     function newMemberDripDrop(
-        uint256 _ethDrip, 
-        uint256 _tokenDrip,  
-        address dripTokenAddress, 
+        uint256 _ethDrip,
+        uint256 _tokenDrip,
+        address dripTokenAddress,
         address payable[] memory _members,
         string memory _message) payable public {
-            
+
         DripDrop = (new MemberDripDrop).value(msg.value)(
             _ethDrip,
             _tokenDrip,
             dripTokenAddress,
             _members,
             _message);
-            
+
         dripdrops.push(address(DripDrop));
         emit newDripDrop(address(DripDrop), _members[0]);
     }
