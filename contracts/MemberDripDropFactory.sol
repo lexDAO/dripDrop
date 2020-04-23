@@ -155,20 +155,27 @@ contract MemberDripDrop is SecretaryRole {
     /************************
     DRIP/DROP TOKEN FUNCTIONS
     ************************/
-    function dripTKN() public onlySecretary { // transfer token to members per stored drip amount
+    function dripTKN() public onlySecretary { // transfer stored drip token to members per drip amount
         for (uint256 i = 0; i < members.length; i++) {
             dripToken.transfer(members[i], tokenDrip);
         }
     }
     
-    function dropTKN(uint256 drop, address dropTokenAddress) public onlySecretary { // transfer token to members per approved drop amount
+    function customDripTKN(uint256[] memory drip, address dripTokenAddress) public onlySecretary { // transfer stored token to members per index drip amounts
         for (uint256 i = 0; i < members.length; i++) {
-            IToken dropToken = IToken(dropTokenAddress);
-            dropToken.transferFrom(msg.sender, members[i], drop);
+            IToken token = IToken(dripTokenAddress);
+            token.transfer(members[i], drip[i]);
         }
     }
     
-    function customDropTKN(uint256[] memory drop, address dropTokenAddress) public onlySecretary { // transfer token to members per approved index drop amounts
+    function dropTKN(uint256 drop, address dropTokenAddress) public { // transfer msg.sender token to members per approved drop amount
+        for (uint256 i = 0; i < members.length; i++) {
+            IToken dropToken = IToken(dropTokenAddress);
+            dropToken.transferFrom(msg.sender, members[i], drop / members.length);
+        }
+    }
+    
+    function customDropTKN(uint256[] memory drop, address dropTokenAddress) public { // transfer msg.sender token to members per approved index drop amounts
         for (uint256 i = 0; i < members.length; i++) {
             IToken dropToken = IToken(dropTokenAddress);
             dropToken.transferFrom(msg.sender, members[i], drop[i]);
@@ -178,21 +185,22 @@ contract MemberDripDrop is SecretaryRole {
     /**********************
     DRIP/DROP ETH FUNCTIONS
     **********************/
-    function dripETH() public onlySecretary { // transfer ETH to members per stored drip amount
+    function dripETH() public onlySecretary { // transfer stored ETH to members per stored drip amount
         for (uint256 i = 0; i < members.length; i++) {
             members[i].transfer(ethDrip);
         }
     }
-
-    function dropETH() payable public onlySecretary { // transfer ETH to members per attached drop amount
+    
+    function customDripETH(uint256[] memory drip) payable public onlySecretary { // transfer stored ETH to members per index drip amounts
         for (uint256 i = 0; i < members.length; i++) {
-            members[i].transfer(msg.value);
+            members[i].transfer(drip[i]);
         }
     }
-    
-    function customDropETH(uint256[] memory drop) payable public onlySecretary { // transfer ETH to members per index drop amounts
+
+    function dropETH(uint256 drop) payable public { // transfer msg.sender ETH to members per attached drop amount
+        require(msg.value == drop);
         for (uint256 i = 0; i < members.length; i++) {
-            members[i].transfer(drop[i]);
+            members[i].transfer(drop / members.length);
         }
     }
     
