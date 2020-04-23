@@ -383,7 +383,7 @@ contract MemberDripDrop is SecretaryRole {
     }
 
     function removeMember(address removedMember) public onlySecretary {
-        require(memberList[removedMember].exists = true, "no such member to remove");
+        require(memberList[removedMember].exists == true, "no such member to remove");
         uint256 memberToDelete = memberList[removedMember].memberIndex;
         address payable keyToMove = members[members.length.sub(1)];
         members[memberToDelete] = keyToMove;
