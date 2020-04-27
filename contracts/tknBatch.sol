@@ -4,12 +4,12 @@ interface IToken {
     function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
 }
 
-contract TokenDrop {
+contract dropToken {
  
-    function dropToken(address tokenAddress, address[] memory recipients, uint256[] memory amounts) public {
+    function dropTKN(uint256[] memory amounts, address tokenAddress, address[] memory recipients) public {
         IToken token = IToken(tokenAddress);
         for (uint256 i = 0; i < recipients.length; i++) {
-		  token.transferFrom(msg.sender, recipients[i], amounts[i]);
+	    token.transferFrom(msg.sender, recipients[i], amounts[i]);
         }
     }
 }
