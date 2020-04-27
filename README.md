@@ -1,8 +1,13 @@
 # Airdrop
 Simple scripts to send ETH and tokens to array of accounts
 
-## Member DripDrop
-> Register members for drips and drops of ETH or tokens.
+## Token Drop
+> Airdrop custom amount of tokens to array of accounts
+
+[Mainnet](https://etherscan.io/dapp/0x1798ef54afaf392e7e683090c25e777f95b73de3#writeContract) ☂️
+
+## Member DripDrop 💉
+> Register members for drips and drops of ETH and tokens.
 
 ## LexDAO 
 [Rinkeby](https://rinkeby.etherscan.io/dapp/0xc878bb16537c7851606cfd4e935a7f6091028292#writeContract) 🚰 
