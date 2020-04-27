@@ -1,8 +1,8 @@
 # Airdrop
-Simple scripts to send ETH and tokens to array of accounts
+Simple ways to send ETH and tokens to a bunch of folks.
 
 ## Token Drop
-> Airdrop custom amount of tokens to array of accounts
+> Airdrop custom amount of tokens to array of accounts.
 
 [Mainnet](https://etherscan.io/dapp/0x1798ef54afaf392e7e683090c25e777f95b73de3#writeContract) ☂️
 
