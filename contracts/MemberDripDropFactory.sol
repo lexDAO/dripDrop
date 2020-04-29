@@ -290,9 +290,9 @@ contract MemberDripDrop is SecretaryRole {
         address payable[] memory _members,
         string memory _message) payable public { // initializes contract
         for (uint256 i = 0; i < _members.length; i++) {
-            require(_members[i] != address(0), "member address cannot be 0");
-            memberList[_members[i]].memberIndex = members.push(_members[i]).sub(1);
-            memberList[_members[i]].exists = true;
+             require(_members[i] != address(0), "member address cannot be 0");
+             memberList[_members[i]].memberIndex = members.push(_members[i]).sub(1);
+             memberList[_members[i]].exists = true;
         }
         
         ethDrip = _ethDrip;
@@ -312,28 +312,28 @@ contract MemberDripDrop is SecretaryRole {
     
     function dripTKN() public onlySecretary { // transfer deposited drip token to members per drip amount
         for (uint256 i = 0; i < members.length; i++) {
-            dripToken.transfer(members[i], tokenDrip);
+             dripToken.transfer(members[i], tokenDrip);
         }
     }
     
     function customDripTKN(uint256[] memory drip, address dripTokenAddress) public onlySecretary { // transfer deposited token to members per index drip amounts
         for (uint256 i = 0; i < members.length; i++) {
-            IToken token = IToken(dripTokenAddress);
-            token.transfer(members[i], drip[i]);
+             IToken token = IToken(dripTokenAddress);
+             token.transfer(members[i], drip[i]);
         }
     }
     
     function dropTKN(uint256 drop, address dropTokenAddress) public { // transfer msg.sender token to members per approved drop amount
         for (uint256 i = 0; i < members.length; i++) {
-            IToken dropToken = IToken(dropTokenAddress);
-            dropToken.transferFrom(msg.sender, members[i], drop.div(members.length));
+             IToken dropToken = IToken(dropTokenAddress);
+             dropToken.transferFrom(msg.sender, members[i], drop.div(members.length));
         }
     }
     
     function customDropTKN(uint256[] memory drop, address dropTokenAddress) public { // transfer msg.sender token to members per approved index drop amounts
         for (uint256 i = 0; i < members.length; i++) {
-            IToken dropToken = IToken(dropTokenAddress);
-            dropToken.transferFrom(msg.sender, members[i], drop[i]);
+             IToken dropToken = IToken(dropTokenAddress);
+             dropToken.transferFrom(msg.sender, members[i], drop[i]);
         }
     }
     
@@ -346,26 +346,26 @@ contract MemberDripDrop is SecretaryRole {
     
     function dripETH() public onlySecretary { // transfer deposited ETH to members per stored drip amount
         for (uint256 i = 0; i < members.length; i++) {
-            members[i].transfer(ethDrip);
+             members[i].transfer(ethDrip);
         }
     }
     
     function customDripETH(uint256[] memory drip) payable public onlySecretary { // transfer deposited ETH to members per index drip amounts
         for (uint256 i = 0; i < members.length; i++) {
-            members[i].transfer(drip[i]);
+             members[i].transfer(drip[i]);
         }
     }
 
     function dropETH() payable public { // transfer msg.sender ETH to members per attached drop amount
         for (uint256 i = 0; i < members.length; i++) {
-            members[i].transfer(msg.value.div(members.length));
+             members[i].transfer(msg.value.div(members.length));
         }
     }
     
     function customDropETH(uint256[] memory drop) payable public { // transfer msg.sender ETH to members per index drop amounts
         for (uint256 i = 0; i < members.length; i++) {
-            require(msg.value == drop[i], "msg.value not sufficient for drop");
-            members[i].transfer(drop[i]);
+             require(msg.value == drop[i], "msg.value not sufficient for drop");
+             members[i].transfer(drop[i]);
         }
     }
     
