@@ -6,7 +6,7 @@ Simple ways to send ETH and tokens to a bunch of folks.
 
 [Mainnet](https://etherscan.io/dapp/0x70814357697C5290920BCa4327fE6640E22edd49#writeContract) ☂️
 
-## Member DripDrop 💉
+# Member DripDrop 💉
 > Register members for drips and drops of ETH and tokens.
 
 ## LexDAO 
