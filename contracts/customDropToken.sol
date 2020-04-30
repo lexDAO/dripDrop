@@ -5,13 +5,13 @@ interface IToken {
 }
 
 contract customDropToken { // transfer msg.sender token to recipients per approved index drop amounts w/ msg.
-    event TokenDropped(address indexed msg.sender, string indexed message);
+    event TokenDropped(string indexed message);
      
     function customDropTKN(uint256[] memory amounts, address tokenAddress, address[] memory recipients, string memory message) public {
         IToken token = IToken(tokenAddress);
         for (uint256 i = 0; i < recipients.length; i++) {
 	     token.transferFrom(msg.sender, recipients[i], amounts[i]);
         }
-	emit TokenDropped(msg.sender, message);
+	emit TokenDropped(message);
     }
 }
