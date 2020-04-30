@@ -8,6 +8,11 @@ Simple ways to send ETH and tokens to a bunch of folks.
 [Mainnet](https://etherscan.io/dapp/0x70814357697C5290920BCa4327fE6640E22edd49#writeContract) ☂️
 
 ## TOKEN
+### Drop Token
+> Airdrop and spread lump sum Tokens among array of accounts.
+
+[Mainnet](https://etherscan.io/dapp/0xCa1D63C7173c994a8e608836806DC594Ad3b5E66#writeContract) ☂️
+
 ### Custom Drop Token
 > Airdrop and spread custom amounts of Tokens among array of accounts.
 
