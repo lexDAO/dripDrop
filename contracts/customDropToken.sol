@@ -12,6 +12,6 @@ contract customDropToken { // transfer msg.sender token to recipients per approv
         for (uint256 i = 0; i < recipients.length; i++) {
 	     token.transferFrom(msg.sender, recipients[i], amounts[i]);
         }
-	emit TokenDropped(msg.sender, message)
+	emit TokenDropped(msg.sender, message);
     }
 }
