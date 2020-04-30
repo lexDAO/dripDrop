@@ -4,7 +4,7 @@ Simple ways to send ETH and tokens to a bunch of folks.
 ## Drop ETH
 > Airdrop and spread lump sum ETH among array of accounts.
 
-[Mainnet](https://etherscan.io/dapp/0xCe4F357aDA9067bbE2b85F53e07d58D4A96ec16d#writeContract) ☂️
+[Mainnet](https://etherscan.io/dapp/0x70814357697C5290920BCa4327fE6640E22edd49#writeContract) ☂️
 
 ## Member DripDrop 💉
 > Register members for drips and drops of ETH and tokens.
