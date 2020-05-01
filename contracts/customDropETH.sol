@@ -1,15 +1,16 @@
 pragma solidity ^0.6.0;
 
-contract DropETH {
+contract DropETH { // transfer msg.sender ETH to recipients by weight  per attached drop amount w/ msg.
+    event ETHDropped(string indexed message);
 
-    function dropETH(uint256[] memory amounts, address payable[] memory recipients) public payable {
-        require(amounts.length == recipients.length);
-        require(amounts.length <= 50);
+    function dropETH(uint256[] memory weights, address payable[] memory recipients, string memory message) public payable {
+        require(weights.length == recipients.length);
 
-        for (uint256 i = 0; i < amounts.length; i++) {
-	        for (uint256 j = 0; j < amounts.length; j++) {
-	            recipients[i].transfer(amounts[j]);
-	        }
+        uint256 totalAmount = msg.value / 100;
+        for (uint256 i = 0; i < recipients.length; i++) {
+            (bool success, ) = recipients[i].call.value(weights[i] * totalAmount)("");
+            require(success, "Transfer failed.");
         }
+        emit ETHDropped(message);
     }
 }
