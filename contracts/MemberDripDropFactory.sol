@@ -278,7 +278,6 @@ contract MemberDripDrop is SecretaryRole {
     event MemberAdded(address indexed addedMember);
     event MemberRemoved(address indexed removedMember);
     event MessageUpdated(string indexed updatedMessage);
-    event SecretaryUpdated(address indexed updatedSecretary);
     
     function() external payable { } // contract receives ETH
 
