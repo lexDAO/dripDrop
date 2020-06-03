@@ -1,4 +1,4 @@
-# Airdrop
+# dripDrop
 Simple ways to send ETH and tokens to a bunch of folks.
 
 ## ETH
