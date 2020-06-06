@@ -460,13 +460,9 @@ contract MemberDripDrop is SecretaryRole {
     string public message;
     
     
-    //internal accounting
-    uint256 public memberTokenTotals = 0;
-    
-    
     mapping(address => Member) public memberList;
     
-   // ["0x6Dbbd541769B3237b96e2f59fca5006B63F836F2", "0x4EDdF44116caE5ab15104E07daE66832F31EB878", "0xfff503425970752F18999996752798c1ACBF979d", "0x0156cFC375e9C614A8a247932c96a197ab9431c9"]
+   // ["0x4EDdF44116caE5ab15104E07daE66832F31EB878", "0xfff503425970752F18999996752798c1ACBF979d"]
    
     struct Member {
         uint256 memberIndex;
@@ -533,8 +529,11 @@ contract MemberDripDrop is SecretaryRole {
     
     function balanceDripTKN() public onlySecretary { // transfer deposited dripToken to members per memberToken-balanced drip amounts
         
+        uint memberTokenTotals = getMemberTokenTotal(); 
+        
         for (uint256 i = 0; i < members.length; i++) {
-            dripToken.safeTransfer(members[i], memberToken.balanceOf(members[i]).div(getMemberTokenTotal()));
+            require(memberTokenTotals > 0, "members do not have any member tokens");
+            dripToken.safeTransfer(members[i], memberToken.balanceOf(members[i]).div(memberTokenTotals));
         }
     }
     
@@ -574,8 +573,12 @@ contract MemberDripDrop is SecretaryRole {
     }
     
     function balanceDripETH() public onlySecretary { // transfer deposited ETH to members per memberToken-balanced drip amounts
+        
+        uint memberTokenTotals = getMemberTokenTotal(); 
+        
         for (uint256 i = 0; i < members.length; i++) {
-            members[i].transfer(memberToken.balanceOf(members[i]).div(getMemberTokenTotal()));
+            require(memberTokenTotals > 0, "members do not have any member tokens");
+            members[i].transfer(memberToken.balanceOf(members[i]).div(memberTokenTotals));
         }
     }
     
@@ -697,11 +700,11 @@ contract MemberDripDrop is SecretaryRole {
         return dripToken.balanceOf(vault);
     }
     
-    function getMemberTokenTotal() public view returns (uint256 memberTokenTotal)  {
+    function getMemberTokenTotal() public view returns (uint256 memberTokenTotals)  {
           
-        memberTokenTotal = 0; 
+        memberTokenTotals = 0; 
         for (uint256 i = 0; i < members.length; i++) {
-         memberTokenTotal += memberToken.balanceOf(members[i]);
+         memberTokenTotals += memberToken.balanceOf(members[i]);
         }
         
     }  
