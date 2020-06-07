@@ -545,13 +545,13 @@ contract MemberDrawDrop is Context {
     }
 }
 
-contract MemberDripDropFactory {
-    MemberDripDrop private DripDrop;
+contract MemberDrawDropFactory {
+    MemberDrawDrop private DripDrop;
     address[] public dripdrops;
 
     event newDripDrop(address indexed dripdrop);
 
-    function newMemberDripDrop(
+    function newMemberDrawDrop(
         address payable[] memory _members, 
         address _memberToken,
         uint256 _joinMin,
@@ -562,7 +562,7 @@ contract MemberDripDropFactory {
         uint256 _tapTimeDelay,
         string memory _message) payable public {
             
-        DripDrop = (new MemberDripDrop).value(msg.value)(
+        DripDrop = (new MemberDrawDrop).value(msg.value)(
             _members, 
             _memberToken,
             _joinMin,
