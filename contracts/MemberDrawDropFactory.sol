@@ -1,26 +1,5 @@
 pragma solidity 0.5.17;
 
-/*
- * @dev Provides information about the current execution context, including the
- * sender of the transaction and its data. While these are generally available
- * via msg.sender and msg.data, they should not be accessed in such a direct
- * manner, since when dealing with GSN meta-transactions the account sending and
- * paying for execution may not be the actual sender (as far as an application
- * is concerned).
- *
- * This contract is only required for intermediate, library-like contracts.
- */
-contract Context {
-    function _msgSender() internal view returns (address payable) {
-        return msg.sender;
-    }
-
-    function _msgData() internal view returns (bytes memory) {
-        this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
-        return msg.data;
-    }
-}
-
 /**
  * @dev Wrappers over Solidity's arithmetic operations with added overflow
  * checks.
@@ -370,6 +349,27 @@ library SafeERC20 {
     }
 }
 
+/*
+ * @dev Provides information about the current execution context, including the
+ * sender of the transaction and its data. While these are generally available
+ * via msg.sender and msg.data, they should not be accessed in such a direct
+ * manner, since when dealing with GSN meta-transactions the account sending and
+ * paying for execution may not be the actual sender (as far as an application
+ * is concerned).
+ *
+ * This contract is only required for intermediate, library-like contracts.
+ */
+contract Context {
+    function _msgSender() internal view returns (address payable) {
+        return msg.sender;
+    }
+
+    function _msgData() internal view returns (bytes memory) {
+        this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
+        return msg.data;
+    }
+}
+
 contract MemberDripDrop is Context {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -391,8 +391,8 @@ contract MemberDripDrop is Context {
     mapping(address => Member) public memberList;
     
     struct Member {
-        uint256 reputation;
         uint256 memberIndex;
+        uint256 reputation;
         uint256 repTime;
         uint256 rewardTime;
         uint256 tapTime;
@@ -414,8 +414,8 @@ contract MemberDripDrop is Context {
         string memory _message) payable public { // initializes contract w/ ETH deposit
         for (uint256 i = 0; i < _members.length; i++) {
             require(_members[i] != address(0), "member address cannot be 0");
-            memberList[_members[i]].reputation = _repMin;
             memberList[_members[i]].memberIndex = members.push(_members[i]).sub(1);
+            memberList[_members[i]].reputation = _repMin;
             memberList[_members[i]].exists = true;
         }
         
@@ -432,7 +432,7 @@ contract MemberDripDrop is Context {
     /************************
     DRIP/DROP TOKEN FUNCTIONS
     ************************/
-    function dripToken(address _drippedToken) public { // transfer deposited token reward to calling member per memberToken-balanced amounts, reputation, rewardTime
+    function drawToken(address _drippedToken) public { // transfer deposited token reward to calling member per memberToken-balanced amounts, reputation, rewardTime
         require(memberList[_msgSender()].reputation >= repMin, "reputation not intact");
         require(now.sub(memberList[_msgSender()].rewardTime) > rewardTimeDelay, "last rewardTime too recent");
         memberList[_msgSender()].rewardTime = now;
@@ -461,7 +461,7 @@ contract MemberDripDrop is Context {
     
     function depositETH() public payable {}
     
-    function dripETH() public { // transfer deposited ETH to calling member per memberToken-balanced amounts, reputation, tapTime
+    function drawETH() public { // transfer deposited ETH to calling member per memberToken-balanced amounts, reputation, tapTime
         require(memberList[_msgSender()].reputation >= repMin, "reputation not intact");
         require(now.sub(memberList[_msgSender()].tapTime) > tapTimeDelay, "last tapTime too recent");
         memberList[_msgSender()].tapTime = now;
@@ -492,7 +492,7 @@ contract MemberDripDrop is Context {
         require(memberToken.balanceOf(_msgSender()) >= joinMin, "memberToken balance insufficient");
         require(memberList[_msgSender()].exists != true, "member already exists");
         memberList[_msgSender()].memberIndex = members.push(_msgSender()).sub(1);
-        memberList[_msgSender()].reputation = 3;
+        memberList[_msgSender()].reputation = repMin;
         memberList[_msgSender()].exists = true;
         emit MemberAdded(_msgSender());
     }
@@ -503,6 +503,7 @@ contract MemberDripDrop is Context {
         address payable keyToMove = members[members.length.sub(1)];
         members[memberToDelete] = keyToMove;
         memberList[keyToMove].memberIndex = memberToDelete;
+        memberList[_msgSender()].reputation = repMin;
         memberList[_msgSender()].exists = false;
         members.length--;
         emit MemberRemoved(_msgSender());
@@ -511,12 +512,16 @@ contract MemberDripDrop is Context {
     // ***************
     // REPUTATION MGMT
     // ***************
-    function reportMember(address reportedMember) public {
-        // tbd
+    function repairMember(address repairedMember) public {
+        require(memberList[_msgSender()].reputation >= repMin, "reputation not intact");
+        require(now.sub(memberList[_msgSender()].repTime) > repTimeDelay, "last tapTime too recent");
+        memberList[repairedMember].reputation = memberList[repairedMember].reputation.add(1);
     }
     
-    function repairMember(address repairedMember) public {
-        // tbd
+    function reportMember(address reportedMember) public {
+        require(memberList[_msgSender()].reputation >= repMin, "reputation not intact");
+        require(now.sub(memberList[_msgSender()].repTime) > repTimeDelay, "last tapTime too recent");
+        memberList[reportedMember].reputation = memberList[reportedMember].reputation.sub(1);
     }
 
     /***************
