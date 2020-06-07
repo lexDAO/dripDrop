@@ -22,77 +22,6 @@ contract Context {
 }
 
 /**
- * @title Roles
- * @dev Library for managing addresses assigned to a Role.
- */
-library Roles {
-    struct Role {
-        mapping (address => bool) bearer;
-    }
-
-    /**
-     * @dev Give an account access to this role.
-     */
-    function add(Role storage role, address account) internal {
-        require(!has(role, account), "Roles: account already has role");
-        role.bearer[account] = true;
-    }
-
-    /**
-     * @dev Remove an account's access to this role.
-     */
-    function remove(Role storage role, address account) internal {
-        require(has(role, account), "Roles: account does not have role");
-        role.bearer[account] = false;
-    }
-
-    /**
-     * @dev Check if an account has this role.
-     * @return bool
-     */
-    function has(Role storage role, address account) internal view returns (bool) {
-        require(account != address(0), "Roles: account is the zero address");
-        return role.bearer[account];
-    }
-}
-
-contract SecretaryRole is Context {
-    using Roles for Roles.Role;
-
-    event SecretaryAdded(address indexed account);
-    event SecretaryRemoved(address indexed account);
-
-    Roles.Role private _secretaries;
-
-    modifier onlySecretary() {
-        require(isSecretary(_msgSender()), "SecretaryRole: caller does not have the Secretary role");
-        _;
-    }
-    
-    function isSecretary(address account) public view returns (bool) {
-        return _secretaries.has(account);
-    }
-
-    function addSecretary(address account) public onlySecretary {
-        _addSecretary(account);
-    }
-
-    function renounceSecretary() public {
-        _removeSecretary(_msgSender());
-    }
-
-    function _addSecretary(address account) internal {
-        _secretaries.add(account);
-        emit SecretaryAdded(account);
-    }
-
-    function _removeSecretary(address account) internal {
-        _secretaries.remove(account);
-        emit SecretaryRemoved(account);
-    }
-}
-
-/**
  * @dev Wrappers over Solidity's arithmetic operations with added overflow
  * checks.
  *
@@ -441,147 +370,112 @@ library SafeERC20 {
     }
 }
 
-contract MemberDripDrop is SecretaryRole {
+contract MemberDripDrop is Context {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
     
     /***************
     INTERNAL DETAILS
     ***************/
-    IERC20 public dividendToken;
-    IERC20 public dripToken;
     address payable[] members;
-    IERC20 memberToken;
+    IERC20 public memberToken;
     address private vault = address(this);
-    uint256 public ethDividend;
-    uint256 public ethDrip;
-    uint256 public tokenDividend;
-    uint256 public tokenDrip;
+    uint256 public joinMin;
+    uint256 public repMax;
+    uint256 public repMin;
+    uint256 public repTimeDelay;
+    uint256 public rewardTimeDelay;
+    uint256 public tapTimeDelay;
     string public message;
     
     mapping(address => Member) public memberList;
     
     struct Member {
+        uint256 reputation;
         uint256 memberIndex;
+        uint256 repTime;
+        uint256 rewardTime;
+        uint256 tapTime;
         bool exists;
     }
 
-    // ******
-    // EVENTS
-    // ******
-    event DividendTokenUpdated(address indexed _dividendToken);
-    event DripTokenUpdated(address indexed _dripToken);
-    event ETHDividendUpdated(uint256 indexed _ethDividend);
-    event ETHDripUpdated(uint256 indexed _ethDrip);
     event MemberAdded(address indexed _member);
     event MemberRemoved(address indexed _member);
-    event MemberTokenUpgraded(address indexed _memberToken);
-    event MessageUpdated(string indexed _message);
-    event TokenDripUpdated(uint256 indexed _tokenDrip);
-    event TokenDividendUpdated(uint256 indexed _tokenDividend);
-    
-    function() external payable {} // contract receives ETH
 
     constructor(
-        address _dividendToken,
-        address _dripToken, 
         address payable[] memory _members,
         address _memberToken,
-        uint256 _ethDividend,
-        uint256 _ethDrip, 
-        uint256 _tokenDividend,
-        uint256 _tokenDrip,  
-        string memory _message) payable public { // initializes contract
+        uint256 _joinMin,
+        uint256 _repMax,
+        uint256 _repMin,
+        uint256 _repTimeDelay,
+        uint256 _rewardTimeDelay,
+        uint256 _tapTimeDelay,
+        string memory _message) payable public { // initializes contract w/ ETH deposit
         for (uint256 i = 0; i < _members.length; i++) {
             require(_members[i] != address(0), "member address cannot be 0");
+            memberList[_members[i]].reputation = _repMin;
             memberList[_members[i]].memberIndex = members.push(_members[i]).sub(1);
             memberList[_members[i]].exists = true;
         }
         
-        dividendToken = IERC20(_dividendToken);
-        dripToken = IERC20(_dripToken);
         memberToken = IERC20(_memberToken);
-        ethDividend = _ethDividend;
-        ethDrip = _ethDrip;
-        tokenDividend = _tokenDividend;
-        tokenDrip = _tokenDrip;
+        joinMin = _joinMin;
+        repMax = _repMax;
+        repMin = _repMin;
+        repTimeDelay = _repTimeDelay;
+        rewardTimeDelay = _rewardTimeDelay;
+        tapTimeDelay = _tapTimeDelay;
         message = _message;
-        
-        _addSecretary(members[0]); // first address in member array is initial secretary  
     }
     
     /************************
     DRIP/DROP TOKEN FUNCTIONS
     ************************/
-    function depositDripTKN() public { // deposit msg.sender drip token in approved amount sufficient for full member drip 
-        dripToken.safeTransferFrom(_msgSender(), vault, tokenDrip.mul(members.length));
+    function dripToken(address _drippedToken) public { // transfer deposited token reward to calling member per memberToken-balanced amounts, reputation, rewardTime
+        require(memberList[_msgSender()].reputation >= repMin, "reputation not intact");
+        require(now.sub(memberList[_msgSender()].rewardTime) > rewardTimeDelay, "last rewardTime too recent");
+        memberList[_msgSender()].rewardTime = now;
+        IERC20 drippedToken = IERC20(_drippedToken);
+        drippedToken.safeTransfer(_msgSender(), memberToken.balanceOf(_msgSender()).div(memberToken.totalSupply()).mul(drippedToken.balanceOf(vault)));
     }
-    
-    function dripTKN() public onlySecretary { // transfer deposited dripToken to members per drip amount
+
+    function lumpDropToken(uint256 drop, address _droppedToken) public { // transfer caller token to members per approved drop amount
         for (uint256 i = 0; i < members.length; i++) {
-            dripToken.safeTransfer(members[i], tokenDrip);
+            IERC20 droppedToken = IERC20(_droppedToken);
+            droppedToken.safeTransferFrom(_msgSender(), members[i], drop.div(members.length));
         }
     }
     
-    function balanceDripTKN() public onlySecretary { // transfer deposited dripToken to members per memberToken-balanced drip amounts
+    function pinDropToken(uint256[] memory drop, address _droppedToken) public { // transfer caller token to members per approved index drop amounts
         for (uint256 i = 0; i < members.length; i++) {
-            dripToken.safeTransfer(members[i], memberToken.balanceOf(members[i]).div(memberToken.totalSupply()));
-        }
-    }
-    
-    function customDripTKN(uint256[] memory drip, address _dripToken) public onlySecretary { // transfer dripToken to members per index drip amounts
-        for (uint256 i = 0; i < members.length; i++) {
-            IERC20 token = IERC20(_dripToken);
-            token.safeTransfer(members[i], drip[i]);
-        }
-    }
-    
-    function dropTKN(uint256 drop, address _dropToken) public { // transfer msg.sender token to members per approved drop amount
-        for (uint256 i = 0; i < members.length; i++) {
-            IERC20 dropToken = IERC20(_dropToken);
-            dropToken.safeTransferFrom(_msgSender(), members[i], drop.div(members.length));
-        }
-    }
-    
-    function customDropTKN(uint256[] memory drop, address _dropToken) public { // transfer msg.sender token to members per approved index drop amounts
-        for (uint256 i = 0; i < members.length; i++) {
-            IERC20 dropToken = IERC20(_dropToken);
-            dropToken.safeTransferFrom(_msgSender(), members[i], drop[i]);
+            IERC20 droppedToken = IERC20(_droppedToken);
+            droppedToken.safeTransferFrom(_msgSender(), members[i], drop[i]);
         }
     }
     
     /**********************
     DRIP/DROP ETH FUNCTIONS
     **********************/
-    function depositDripETH() public payable { // deposit ETH in amount sufficient for full member drip
-        require(msg.value == ethDrip.mul(members.length), "msg.value not sufficient for drip");
-    }
+    function() external payable {} 
     
-    function dripETH() public onlySecretary { // transfer deposited ETH to members per stored drip amount
-        for (uint256 i = 0; i < members.length; i++) {
-            members[i].transfer(ethDrip);
-        }
-    }
+    function depositETH() public payable {}
     
-    function balanceDripETH() public onlySecretary { // transfer deposited ETH to members per memberToken-balanced drip amounts
-        for (uint256 i = 0; i < members.length; i++) {
-            members[i].transfer(memberToken.balanceOf(members[i]).div(memberToken.totalSupply()));
-        }
-    }
-    
-    function customDripETH(uint256[] memory drip) payable public onlySecretary { // transfer deposited ETH to members per index drip amounts
-        for (uint256 i = 0; i < members.length; i++) {
-            members[i].transfer(drip[i]);
-        }
+    function dripETH() public { // transfer deposited ETH to calling member per memberToken-balanced amounts, reputation, tapTime
+        require(memberList[_msgSender()].reputation >= repMin, "reputation not intact");
+        require(now.sub(memberList[_msgSender()].tapTime) > tapTimeDelay, "last tapTime too recent");
+        memberList[_msgSender()].tapTime = now;
+        _msgSender().transfer(memberToken.balanceOf(_msgSender()).div(memberToken.totalSupply()).mul(ETHBalance())); 
     }
 
-    function dropETH() payable public { // transfer msg.sender ETH to members per attached drop amount
+    function lumpDropETH() payable public { // transfer caller ETH to members per attached drop amount
         for (uint256 i = 0; i < members.length; i++) {
             members[i].transfer(msg.value.div(members.length));
         }
     }
     
-    function customDropETH(uint256[] memory drop) payable public { // transfer msg.sender ETH to members per index drop amounts
+    function pinDropETH(uint256[] memory drop) payable public { // transfer caller ETH to members per index drop amounts
+        require(drop.length == members.length);
         for (uint256 i = 0; i < members.length; i++) {
             require(msg.value == drop[i], "msg.value not sufficient for drop");
             members[i].transfer(drop[i]);
@@ -589,76 +483,49 @@ contract MemberDripDrop is SecretaryRole {
     }
     
     /*******************
-    MANAGEMENT FUNCTIONS
+    MEMBERSHIP FUNCTIONS
     *******************/
     // ******************
     // DRIP/DROP REGISTRY
     // ******************
-    function addMember(address payable _member) public onlySecretary { 
-        require(memberList[_member].exists != true, "member already exists");
-        memberList[_member].memberIndex = members.push(_member).sub(1);
-        memberList[_member].exists = true;
-        emit MemberAdded(_member);
+    function joinMembership() public { 
+        require(memberToken.balanceOf(_msgSender()) >= joinMin, "memberToken balance insufficient");
+        require(memberList[_msgSender()].exists != true, "member already exists");
+        memberList[_msgSender()].memberIndex = members.push(_msgSender()).sub(1);
+        memberList[_msgSender()].reputation = 3;
+        memberList[_msgSender()].exists = true;
+        emit MemberAdded(_msgSender());
     }
 
-    function removeMember(address _member) public onlySecretary {
-        require(memberList[_member].exists == true, "no such member to remove");
-        uint256 memberToDelete = memberList[_member].memberIndex;
+    function leaveMembership() public {
+        require(memberList[_msgSender()].exists == true, "must already be member");
+        uint256 memberToDelete = memberList[_msgSender()].memberIndex;
         address payable keyToMove = members[members.length.sub(1)];
         members[memberToDelete] = keyToMove;
         memberList[keyToMove].memberIndex = memberToDelete;
-        memberList[_member].exists = false;
+        memberList[_msgSender()].exists = false;
         members.length--;
-        emit MemberRemoved(_member);
+        emit MemberRemoved(_msgSender());
     }
     
-    function updateMessage(string memory _message) public onlySecretary {
-        message = _message;
-        emit MessageUpdated(_message);
+    // ***************
+    // REPUTATION MGMT
+    // ***************
+    function reportMember(address reportedMember) public {
+        // tbd
+    }
+    
+    function repairMember(address repairedMember) public {
+        // tbd
     }
 
-    // ****************
-    // DIVIDEND DETAILS
-    // ****************
-    function updateETHDividend(uint256 _ethDividend) public onlySecretary {
-        ethDividend = _ethDividend;
-        emit ETHDividendUpdated(_ethDividend);
-    }
-    
-    function updateDividendToken(address _dividendToken) public onlySecretary {
-        dividendToken = IERC20(_dividendToken);
-        emit DividendTokenUpdated(_dividendToken);
-    }
-    
-    function updateTokenDividend(uint256 _tokenDividend) public onlySecretary {
-        tokenDividend = _tokenDividend;
-        emit TokenDividendUpdated(_tokenDividend);
-    }
-    
-    // ************
-    // DRIP DETAILS
-    // ************
-    function updateETHDrip(uint256 _ethDrip) public onlySecretary {
-        ethDrip = _ethDrip;
-        emit ETHDripUpdated(_ethDrip);
-    }
-    
-    function updateDripToken(address _dripToken) public onlySecretary {
-        dripToken = IERC20(_dripToken);
-        emit DripTokenUpdated(_dripToken);
-    }
-    
-    function updateTokenDrip(uint256 _tokenDrip) public onlySecretary {
-        tokenDrip = _tokenDrip;
-        emit TokenDripUpdated(_tokenDrip);
-    }
-    
     /***************
     GETTER FUNCTIONS
     ***************/
-    // ******
-    // MEMBER
-    // ******
+    function ETHBalance() public view returns (uint256) { 
+        return vault.balance;
+    }
+
     function Membership() public view returns (address payable[] memory) {
         return members;
     }
@@ -671,52 +538,37 @@ contract MemberDripDrop is SecretaryRole {
         if(members.length == 0) return false;
         return (members[memberList[_member].memberIndex] == _member);
     }
-    
-    // *****
-    // VAULT
-    // *****
-    function ETHBalance() public view returns (uint256) { // get balance of ETH 
-        return vault.balance;
-    }
-    
-    function DividendTokenBalance() public view returns (uint256) { // get balance of dividendToken 
-        return dividendToken.balanceOf(vault);
-    }
-    
-    function DripTokenBalance() public view returns (uint256) { // get balance of dripToken 
-        return dripToken.balanceOf(vault);
-    }
 }
 
 contract MemberDripDropFactory {
     MemberDripDrop private DripDrop;
     address[] public dripdrops;
 
-    event newDripDrop(address indexed dripdrop, address indexed secretary);
+    event newDripDrop(address indexed dripdrop);
 
     function newMemberDripDrop(
-        address _dividendToken,
-        address _dripToken, 
-        address payable[] memory _members, // first address in member array is initial secretary  
+        address payable[] memory _members, 
         address _memberToken,
-        uint256 _ethDividend,
-        uint256 _ethDrip, 
-        uint256 _tokenDividend,
-        uint256 _tokenDrip,  
+        uint256 _joinMin,
+        uint256 _repMax,
+        uint256 _repMin,
+        uint256 _repTimeDelay,
+        uint256 _rewardTimeDelay,
+        uint256 _tapTimeDelay,
         string memory _message) payable public {
             
         DripDrop = (new MemberDripDrop).value(msg.value)(
-            _dividendToken,
-            _dripToken, 
             _members, 
             _memberToken,
-            _ethDividend,
-            _ethDrip, 
-            _tokenDividend,
-            _tokenDrip,  
+            _joinMin,
+            _repMax,
+            _repMin,
+            _repTimeDelay,
+            _rewardTimeDelay,
+            _tapTimeDelay,
             _message);
             
         dripdrops.push(address(DripDrop));
-        emit newDripDrop(address(DripDrop), _members[0]);
+        emit newDripDrop(address(DripDrop));
     }
 }
