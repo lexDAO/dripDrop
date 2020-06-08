@@ -370,7 +370,7 @@ contract Context {
     }
 }
 
-contract MemberDripDrop is Context {
+contract MemberDripDraw is Context {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
     
@@ -392,7 +392,7 @@ contract MemberDripDrop is Context {
     
     struct Member {
         uint256 memberIndex;
-        uint256 reputation;
+        uint256 rep;
         uint256 repTime;
         uint256 rewardTime;
         uint256 tapTime;
@@ -401,11 +401,13 @@ contract MemberDripDrop is Context {
 
     event MemberAdded(address indexed _member);
     event MemberRemoved(address indexed _member);
+    event MemberRepaired(address indexed caller, address indexed repairedMember);
+    event MemberReported(address indexed caller, address indexed reportedMember);
 
     constructor(
         address payable[] memory _members,
         address _memberToken,
-        uint256 _joinMin,
+        uint256 _joinMin, // min memberToken balance to join memberIndex
         uint256 _repMax,
         uint256 _repMin,
         uint256 _repTimeDelay,
@@ -414,8 +416,9 @@ contract MemberDripDrop is Context {
         string memory _message) payable public { // initializes contract w/ ETH deposit
         for (uint256 i = 0; i < _members.length; i++) {
             require(_members[i] != address(0), "member address cannot be 0");
+            require(memberToken.balanceOf(_members[i]) >= _joinMin, "memberToken balance insufficient");
             memberList[_members[i]].memberIndex = members.push(_members[i]).sub(1);
-            memberList[_members[i]].reputation = _repMin;
+            memberList[_members[i]].rep = _repMin;
             memberList[_members[i]].exists = true;
         }
         
@@ -429,47 +432,22 @@ contract MemberDripDrop is Context {
         message = _message;
     }
     
-    /************************
-    DRIP/DROP TOKEN FUNCTIONS
-    ************************/
-    function drawToken(address _drippedToken) public { // transfer deposited token reward to calling member per memberToken-balanced amounts, reputation, rewardTime
-        require(memberList[_msgSender()].reputation >= repMin, "reputation not intact");
-        require(now.sub(memberList[_msgSender()].rewardTime) > rewardTimeDelay, "last rewardTime too recent");
-        memberList[_msgSender()].rewardTime = now;
-        IERC20 drippedToken = IERC20(_drippedToken);
-        drippedToken.safeTransfer(_msgSender(), memberToken.balanceOf(_msgSender()).div(memberToken.totalSupply()).mul(drippedToken.balanceOf(vault)));
-    }
-
-    function lumpDropToken(uint256 drop, address _droppedToken) public { // transfer caller token to members per approved drop amount
-        for (uint256 i = 0; i < members.length; i++) {
-            IERC20 droppedToken = IERC20(_droppedToken);
-            droppedToken.safeTransferFrom(_msgSender(), members[i], drop.div(members.length));
-        }
-    }
-    
-    function pinDropToken(uint256[] memory drop, address _droppedToken) public { // transfer caller token to members per approved index drop amounts
-        for (uint256 i = 0; i < members.length; i++) {
-            IERC20 droppedToken = IERC20(_droppedToken);
-            droppedToken.safeTransferFrom(_msgSender(), members[i], drop[i]);
-        }
-    }
-    
     /**********************
-    DRIP/DROP ETH FUNCTIONS
+    DRIP/DRAW ETH FUNCTIONS
     **********************/
     function() external payable {} 
     
     function depositETH() public payable {}
     
-    function drawETH() public { // transfer deposited ETH to calling member per memberToken-balanced amounts, reputation, tapTime
-        require(memberList[_msgSender()].reputation >= repMin, "reputation not intact");
+    function drawETH() public { // transfer deposited ETH to calling member per memberToken-balanced amounts, rep, tapTime
+        require(memberList[_msgSender()].rep >= repMin, "rep not intact");
         require(now.sub(memberList[_msgSender()].tapTime) > tapTimeDelay, "last tapTime too recent");
         memberList[_msgSender()].tapTime = now;
-        _msgSender().transfer(memberToken.balanceOf(_msgSender()).div(memberToken.totalSupply()).mul(ETHBalance())); 
+        _msgSender().transfer(memberToken.balanceOf(_msgSender()).div(memberToken.totalSupply()).mul(ETHBalance()));
     }
 
     function lumpDropETH() payable public { // transfer caller ETH to members per attached drop amount
-        for (uint256 i = 0; i < members.length; i++) {
+        for (uint256 i = 0; i < members.length; i++) { 
             members[i].transfer(msg.value.div(members.length));
         }
     }
@@ -482,6 +460,32 @@ contract MemberDripDrop is Context {
         }
     }
     
+    /************************
+    DRIP/DRAW TOKEN FUNCTIONS
+    ************************/
+    function drawToken(address _drawnToken) public { // transfer deposited token to calling member per memberToken-balanced amounts, rep, rewardTime
+        require(memberList[_msgSender()].rep >= repMin, "rep not intact");
+        require(now.sub(memberList[_msgSender()].rewardTime) > rewardTimeDelay, "last rewardTime too recent");
+        memberList[_msgSender()].rewardTime = now;
+        IERC20 drawnToken = IERC20(_drawnToken);
+        drawnToken.safeTransfer(_msgSender(), memberToken.balanceOf(_msgSender()).div(memberToken.totalSupply()).mul(drawnToken.balanceOf(vault)));
+    }
+
+    function lumpDropToken(uint256 drop, address _droppedToken) public { // transfer caller token to members per approved drop amount
+        for (uint256 i = 0; i < members.length; i++) {
+            IERC20 droppedToken = IERC20(_droppedToken);
+            droppedToken.safeTransferFrom(_msgSender(), members[i], drop.div(members.length));
+        }
+    }
+    
+    function pinDropToken(uint256[] memory drop, address _droppedToken) public { // transfer caller token to members per approved index drop amounts
+        require(drop.length == members.length);
+        for (uint256 i = 0; i < members.length; i++) {
+            IERC20 droppedToken = IERC20(_droppedToken);
+            droppedToken.safeTransferFrom(_msgSender(), members[i], drop[i]);
+        }
+    }
+ 
     /*******************
     MEMBERSHIP FUNCTIONS
     *******************/
@@ -492,7 +496,7 @@ contract MemberDripDrop is Context {
         require(memberToken.balanceOf(_msgSender()) >= joinMin, "memberToken balance insufficient");
         require(memberList[_msgSender()].exists != true, "member already exists");
         memberList[_msgSender()].memberIndex = members.push(_msgSender()).sub(1);
-        memberList[_msgSender()].reputation = repMin;
+        memberList[_msgSender()].rep = repMin;
         memberList[_msgSender()].exists = true;
         emit MemberAdded(_msgSender());
     }
@@ -503,25 +507,29 @@ contract MemberDripDrop is Context {
         address payable keyToMove = members[members.length.sub(1)];
         members[memberToDelete] = keyToMove;
         memberList[keyToMove].memberIndex = memberToDelete;
-        memberList[_msgSender()].reputation = repMin;
+        memberList[_msgSender()].rep = repMin;
         memberList[_msgSender()].exists = false;
         members.length--;
         emit MemberRemoved(_msgSender());
     }
     
     // ***************
-    // REPUTATION MGMT
+    // rep MGMT
     // ***************
     function repairMember(address repairedMember) public {
-        require(memberList[_msgSender()].reputation >= repMin, "reputation not intact");
-        require(now.sub(memberList[_msgSender()].repTime) > repTimeDelay, "last tapTime too recent");
-        memberList[repairedMember].reputation = memberList[repairedMember].reputation.add(1);
+        require(_msgSender() != repairedMember, "cannot repair self");
+        require(memberList[_msgSender()].rep >= repMin, "rep not intact");
+        require(now.sub(memberList[_msgSender()].repTime) > repTimeDelay, "last repTime too recent");
+        memberList[repairedMember].rep = memberList[repairedMember].rep.add(1);
+        emit MemberRepaired(_msgSender(), repairedMember);
     }
     
     function reportMember(address reportedMember) public {
-        require(memberList[_msgSender()].reputation >= repMin, "reputation not intact");
-        require(now.sub(memberList[_msgSender()].repTime) > repTimeDelay, "last tapTime too recent");
-        memberList[reportedMember].reputation = memberList[reportedMember].reputation.sub(1);
+        require(_msgSender() != reportedMember, "cannot report self");
+        require(memberList[_msgSender()].rep >= repMin, "rep not intact");
+        require(now.sub(memberList[_msgSender()].repTime) > repTimeDelay, "last repTime too recent");
+        memberList[reportedMember].rep = memberList[reportedMember].rep.sub(1);
+        emit MemberReported(_msgSender(), reportedMember);
     }
 
     /***************
@@ -545,13 +553,13 @@ contract MemberDripDrop is Context {
     }
 }
 
-contract MemberDripDropFactory {
-    MemberDripDrop private DripDrop;
-    address[] public dripdrops;
+contract MemberDripDrawFactory {
+    MemberDripDraw private DripDraw;
+    address[] public dripdraws;
 
-    event newDripDrop(address indexed dripdrop);
+    event newDripDraw(address indexed dripdraw);
 
-    function newMemberDripDrop(
+    function newMemberDripDraw(
         address payable[] memory _members, 
         address _memberToken,
         uint256 _joinMin,
@@ -562,7 +570,7 @@ contract MemberDripDropFactory {
         uint256 _tapTimeDelay,
         string memory _message) payable public {
             
-        DripDrop = (new MemberDripDrop).value(msg.value)(
+        DripDraw = (new MemberDripDraw).value(msg.value)(
             _members, 
             _memberToken,
             _joinMin,
@@ -573,7 +581,7 @@ contract MemberDripDropFactory {
             _tapTimeDelay,
             _message);
             
-        dripdrops.push(address(DripDrop));
-        emit newDripDrop(address(DripDrop));
+        dripdraws.push(address(DripDraw));
+        emit newDripDraw(address(DripDraw));
     }
 }
