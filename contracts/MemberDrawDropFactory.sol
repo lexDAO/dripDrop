@@ -171,25 +171,23 @@ contract MemberDrawDrop is Context {
     /************************
     DRAW/DROP TOKEN FUNCTIONS
     ************************/
-    function drawToken(address _drawnToken) public { // transfer deposited token reward to calling member per memberToken-balanced amounts, reputation, rewardTime
-        require(memberList[_msgSender()].reputation >= repMin, "reputation not intact");
-        require(now.sub(memberList[_msgSender()].rewardTime) > rewardTimeDelay, "last rewardTime too recent");
+    function drawToken(address drawnToken) public { // transfer deposited token reward to calling member per memberToken-balanced amounts, reputation, 'reward time'
+        require(memberList[_msgSender()].reputation >= repMin, "reputation too low");
+        require(now.sub(memberList[_msgSender()].rewardTime) > rewardTimeDelay, "rewardTime too recent");
         memberList[_msgSender()].rewardTime = now;
-        IERC20 drippedToken = IERC20(_drippedToken);
-        drippedToken.safeTransfer(_msgSender(), memberToken.balanceOf(_msgSender()).div(memberToken.totalSupply()).mul(drippedToken.balanceOf(vault)));
+        IERC20(drawnToken).safeTransfer(_msgSender(), memberToken.balanceOf(_msgSender()).div(memberToken.totalSupply()).mul(drawnToken.balanceOf(address(this))));
     }
 
-    function lumpDropToken(uint256 drop, address _droppedToken) public { // transfer caller token to members per approved drop amount
+    function lumpDropToken(uint256 drop, address lumpDroppedToken) public { // transfer caller token to members per approved 'lump drop' amount
         for (uint256 i = 0; i < members.length; i++) {
-            IERC20 droppedToken = IERC20(_droppedToken);
-            droppedToken.safeTransferFrom(_msgSender(), members[i], drop.div(members.length));
+            IERC20(lumpDroppedToken).safeTransferFrom(_msgSender(), members[i], drop.div(members.length));
         }
     }
     
-    function pinDropToken(uint256[] memory drop, address _droppedToken) public { // transfer caller token to members per approved index drop amounts
+    function pinDropToken(uint256[] memory drop, address pinDroppedToken) public { // transfer caller token to each member per approved 'pin drop' amounts
+        require(drop.length == members.length, "drop/members mismatch");
         for (uint256 i = 0; i < members.length; i++) {
-            IERC20 droppedToken = IERC20(_droppedToken);
-            droppedToken.safeTransferFrom(_msgSender(), members[i], drop[i]);
+            pinDroppedToken.safeTransferFrom(_msgSender(), members[i], drop[i]);
         }
     }
     
@@ -200,16 +198,18 @@ contract MemberDrawDrop is Context {
     
     function depositETH() public payable {}
     
-    function drawETH() public { // transfer deposited ETH to calling member per memberToken-balanced amounts, reputation, tapTime
-        require(memberList[_msgSender()].reputation >= repMin, "reputation not intact");
-        require(now.sub(memberList[_msgSender()].tapTime) > tapTimeDelay, "last tapTime too recent");
+    function drawETH() public { // transfer deposited ETH to calling member per memberToken-balanced amounts, reputation, 'tap time'
+        require(memberList[_msgSender()].reputation >= repMin, "reputation too low");
+        require(now.sub(memberList[_msgSender()].tapTime) > tapTimeDelay, "tapTime too recent");
         memberList[_msgSender()].tapTime = now;
-        _msgSender().transfer(memberToken.balanceOf(_msgSender()).div(memberToken.totalSupply()).mul(ETHBalance())); 
+        (bool success, ) = _msgSender().call.value(memberToken.balanceOf(_msgSender()).div(memberToken.totalSupply()).mul(ETHBalance()))("");
+        require(success, "transfer failed");
     }
 
-    function lumpDropETH() payable public { // transfer caller ETH to members per attached drop amount
+    function lumpDropETH() payable public { // transfer caller ETH to members per attached 'lump drop' amount
         for (uint256 i = 0; i < members.length; i++) {
-            members[i].transfer(msg.value.div(members.length));
+            (bool success, ) = members[i].call.value(msg.value.div(members.length))("");
+            require(success, "transfer failed");
         }
     }
     
