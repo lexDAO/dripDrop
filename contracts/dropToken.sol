@@ -11,7 +11,7 @@ contract DropToken { // transfer msg.sender token to recipients per approved dro
         IToken token = IToken(tokenAddress);
         uint256 amounts = amount / recipients.length;
         for (uint256 i = 0; i < recipients.length; i++) {
-	    token.transferFrom(msg.sender, recipients[i], amounts);}
-	    emit DropTKN(message);
+	token.transferFrom(msg.sender, recipients[i], amounts);}
+	emit DropTKN(message);
     }
 }
